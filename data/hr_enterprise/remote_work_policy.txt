@@ -1,0 +1,56 @@
+REMOTE WORK POLICY
+Company: TechCorp Solutions
+Effective Date: January 1, 2024
+Version: 2.0
+
+1. ELIGIBILITY
+All full-time employees who have completed 90 days of employment 
+are eligible to apply for remote work arrangements. Part-time 
+employees may be eligible at manager discretion. Contractors 
+and interns are not eligible for remote work arrangements.
+
+2. EQUIPMENT AND TECHNOLOGY
+The company will provide a laptop and necessary software licenses 
+for all approved remote workers. Employees are responsible for 
+maintaining a reliable internet connection with minimum speeds 
+of 25 Mbps download and 10 Mbps upload. A dedicated workspace 
+free from distractions is strongly recommended.
+
+3. WORK HOURS AND AVAILABILITY
+Remote employees must be available during core hours of 10am 
+to 3pm in their local timezone Monday through Friday. Attendance 
+at all scheduled team meetings is mandatory regardless of location. 
+Employees must respond to messages within 2 hours during core hours.
+
+4. PERFORMANCE AND PRODUCTIVITY
+Remote employees are held to the same performance standards as 
+in-office employees. Managers will conduct quarterly performance 
+reviews with specific attention to productivity metrics and 
+communication effectiveness. Failure to meet standards may 
+result in remote work privileges being revoked.
+
+5. SECURITY AND CONFIDENTIALITY
+All remote work must be conducted on company-approved devices only. 
+Use of public WiFi is strictly prohibited without VPN connection. 
+Employees must lock their screens when stepping away. Company data 
+must never be stored on personal devices or unauthorized cloud 
+storage services.
+
+6. EXPENSES AND REIMBURSEMENT
+The company will reimburse up to 50 dollars per month for internet 
+expenses with valid receipts. Home office equipment purchases above 
+100 dollars require prior manager approval. Reimbursement requests 
+must be submitted within 30 days of the expense.
+
+7. HEALTH AND WELLBEING
+Remote employees are encouraged to take regular breaks and maintain 
+a healthy work-life balance. The company provides access to mental 
+health resources through the Employee Assistance Program. Remote 
+workers should have a dedicated workspace that meets basic ergonomic 
+standards.
+
+8. POLICY VIOLATIONS
+Violations of this remote work policy may result in disciplinary 
+action up to and including termination of remote work privileges 
+or employment. Employees are expected to report any security 
+incidents immediately to the IT department.
