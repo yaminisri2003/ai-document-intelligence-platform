@@ -35,6 +35,9 @@ class Settings:
     # How much detail to show in logs
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
+    # Where ChromaDB stores its data on disk
+    CHROMA_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma_db")
+
     def validate(self):
         """
         Check that critical settings are present.
