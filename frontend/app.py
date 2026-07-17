@@ -1,292 +1,565 @@
 # app.py
-# The Streamlit frontend for AI Document Intelligence Platform.
-#
+# Streamlit frontend - professional UI
 # Run with: streamlit run frontend/app.py
-#
-# This file creates a complete chat interface that:
-# - Lets users select their domain
-# - Upload documents for ingestion
-# - Ask questions and see AI answers
-# - View source citations
-# - Maintains conversation history visually
 
 import streamlit as st
 import requests
 import uuid
-from pathlib import Path
 
 # ─────────────────────────────────────────
-# CONFIGURATION
-# ─────────────────────────────────────────
-
-# URL of our FastAPI backend
-# When running locally both run on your machine
-API_URL = "http://localhost:8000"
-
-# Available domains with friendly display names
-DOMAINS = {
-    "hr_enterprise": "HR / Enterprise",
-    "healthcare":    "Healthcare",
-    "legal":         "Legal",
-    "finance":       "Finance",
-}
-
-# ─────────────────────────────────────────
-# PAGE SETUP
+# PAGE CONFIG
 # ─────────────────────────────────────────
 
 st.set_page_config(
     page_title="AI Document Intelligence",
     page_icon="🤖",
-    layout="wide",
+    layout="centered",
+    initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────
-# SESSION STATE INITIALIZATION
+# CSS
 # ─────────────────────────────────────────
-# These values persist across Streamlit reruns.
-# Without session_state they would reset on every interaction.
+
+st.markdown("""
+<style>
+
+/* ── Global ── */
+html, body { font-size: 16px; }
+
+/* ── Header ── */
+.app-header {
+    padding: 1.5rem 0 0.5rem 0;
+}
+
+.app-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.5px;
+}
+
+.app-subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.domain-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    color: #4f46e5;
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.tagline {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+/* ── Chat bubbles ── */
+.chat-row-user {
+    display: flex;
+    justify-content: flex-end;
+    margin: 10px 0;
+}
+
+.chat-row-bot {
+    display: flex;
+    justify-content: flex-start;
+    margin: 10px 0;
+}
+
+.bubble-user {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff;
+    border-radius: 20px 20px 4px 20px;
+    padding: 12px 18px;
+    max-width: 78%;
+    font-size: 1rem;
+    line-height: 1.65;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+}
+
+.bubble-bot {
+    background: #f8fafc;
+    color: #1e293b;
+    border-radius: 20px 20px 20px 4px;
+    padding: 14px 18px;
+    max-width: 78%;
+    font-size: 1rem;
+    line-height: 1.65;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.avatar-user {
+    font-size: 1.3rem;
+    margin-left: 10px;
+    align-self: flex-end;
+}
+
+.avatar-bot {
+    font-size: 1.3rem;
+    margin-right: 10px;
+    align-self: flex-end;
+}
+
+/* ── Source pills ── */
+.sources-section {
+    margin: 8px 0 14px 0;
+    padding: 10px 14px;
+    background: #f8f9ff;
+    border-radius: 12px;
+    border: 1px solid #e0e7ff;
+}
+
+.sources-title {
+    font-size: 0.82rem;
+    color: #6366f1;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+}
+
+.source-pill {
+    display: inline-block;
+    background: #ede9fe;
+    color: #4338ca;
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 0.82rem;
+    margin: 3px 3px 3px 0;
+    font-weight: 600;
+    border: 1px solid #c7d2fe;
+}
+
+/* ── Welcome card ── */
+.welcome-card {
+    text-align: center;
+    padding: 60px 20px 40px 20px;
+}
+
+.welcome-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.welcome-heading {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.welcome-text {
+    font-size: 1rem;
+    color: #94a3b8;
+    line-height: 1.7;
+}
+
+.feature-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+
+.feature-chip {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+/* ── Chat input ── */
+[data-testid="stChatInput"] > div {
+    border: 2px solid #6366f1 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    font-size: 1rem !important;
+    min-height: 54px !important;
+    color: #1e293b !important;
+    background: transparent !important;
+    padding: 14px 16px !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #a5b4fc !important;
+}
+
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: #f8f9ff;
+}
+
+section[data-testid="stSidebar"] > div {
+    padding: 1.2rem 1rem;
+}
+
+/* ── Sidebar title ── */
+.sidebar-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.3px;
+}
+
+/* ── Status badges ── */
+.status-ok {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #15803d;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: block;
+    text-align: center;
+    border: 1px solid #86efac;
+}
+
+.status-fail {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #b91c1c;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: block;
+    text-align: center;
+    border: 1px solid #fca5a5;
+}
+
+/* ── Section labels ── */
+.section-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 4px 0 6px 0;
+}
+
+/* ── Bottom padding ── */
+.main .block-container {
+    padding-bottom: 100px !important;
+    max-width: 800px !important;
+    padding-top: 0 !important;
+}
+
+/* ── Divider ── */
+hr {
+    border-color: #e2e8f0 !important;
+    margin: 10px 0 !important;
+}
+
+/* ── Buttons ── */
+.stButton > button {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    padding: 9px 16px !important;
+    transition: all 0.2s ease;
+}
+
+/* ── Session info ── */
+.session-info {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 4px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────
+# CONFIGURATION
+# ─────────────────────────────────────────
+
+API_URL = "http://localhost:8000"
+
+DOMAINS = {
+    "hr_enterprise": "🏢 HR / Enterprise",
+    "healthcare":    "🏥 Healthcare",
+    "legal":         "⚖️ Legal",
+    "finance":       "💰 Finance",
+}
+
+DOMAIN_DESCRIPTIONS = {
+    "hr_enterprise": "Company policies, SOPs, employee handbook",
+    "healthcare":    "Clinical notes, discharge summaries, reports",
+    "legal":         "Contracts, clauses, legal agreements",
+    "finance":       "Financial reports, earnings, filings",
+}
+
+# ─────────────────────────────────────────
+# SESSION STATE
+# ─────────────────────────────────────────
 
 if "messages" not in st.session_state:
-    # Stores the full conversation history for display
-    # Format: [{"role": "user/assistant", "content": "..."}]
     st.session_state.messages = []
-
 if "session_id" not in st.session_state:
-    # Unique ID for this browser session
-    # Sent to FastAPI so it knows which conversation to continue
     st.session_state.session_id = str(uuid.uuid4())
-
 if "domain" not in st.session_state:
-    # Currently selected domain
     st.session_state.domain = "hr_enterprise"
-
 if "last_sources" not in st.session_state:
-    # Sources from the most recent answer
     st.session_state.last_sources = []
 
 # ─────────────────────────────────────────
-# HELPER FUNCTIONS
+# HELPERS
 # ─────────────────────────────────────────
 
 def check_api_health() -> bool:
-    """
-    Check if the FastAPI backend is running.
-    Returns True if healthy, False if not reachable.
-    """
     try:
-        response = requests.get(f"{API_URL}/health", timeout=3)
-        return response.status_code == 200
-    except requests.exceptions.ConnectionError:
+        r = requests.get(f"{API_URL}/health", timeout=3)
+        return r.status_code == 200
+    except:
         return False
 
 
 def send_message(message: str, domain: str, session_id: str) -> dict:
-    """
-    Send a chat message to the FastAPI backend.
-
-    Args:
-        message:    User's question
-        domain:     Active domain
-        session_id: Session identifier
-
-    Returns:
-        API response dict with answer and sources
-    """
     try:
-        response = requests.post(
+        r = requests.post(
             f"{API_URL}/chat",
-            json={
-                "message":    message,
-                "domain":     domain,
-                "session_id": session_id,
-            },
+            json={"message": message, "domain": domain, "session_id": session_id},
             timeout=30,
         )
-        response.raise_for_status()
-        return response.json()
-
+        r.raise_for_status()
+        return r.json()
     except requests.exceptions.ConnectionError:
         return {
-            "answer": "Cannot connect to the API. "
-                     "Please start the FastAPI server with: "
-                     "uvicorn app.api.main:app --reload",
+            "answer": "⚠️ Cannot reach the API. Start it with:\n`uvicorn app.api.main:app --reload`",
             "sources": [],
         }
     except Exception as e:
-        return {
-            "answer": f"Error: {str(e)}",
-            "sources": [],
-        }
+        return {"answer": f"⚠️ Error: {str(e)}", "sources": []}
 
 
 def ingest_document(file, domain: str) -> dict:
-    """
-    Upload a document to the FastAPI ingest endpoint.
-
-    Args:
-        file:   Streamlit uploaded file object
-        domain: Domain to ingest into
-
-    Returns:
-        API response dict
-    """
     try:
-        response = requests.post(
+        r = requests.post(
             f"{API_URL}/ingest",
             files={"file": (file.name, file.getvalue(), file.type)},
             data={"domain": domain},
             timeout=60,
         )
-        response.raise_for_status()
-        return response.json()
-
+        r.raise_for_status()
+        return r.json()
     except Exception as e:
         return {"message": f"Error: {str(e)}", "chunks_created": 0}
 
+
+def render_message(role: str, content: str):
+    if role == "user":
+        st.markdown(
+            f'<div class="chat-row-user">'
+            f'<div class="bubble-user">{content}</div>'
+            f'<div class="avatar-user">👤</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="chat-row-bot">'
+            f'<div class="avatar-bot">🤖</div>'
+            f'<div class="bubble-bot">{content}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
 # ─────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────
 
 with st.sidebar:
-    st.title("⚙️ Settings")
+    st.markdown('<div class="sidebar-title">⚙️ Control Panel</div>',
+                unsafe_allow_html=True)
     st.divider()
 
-    # API Health Status
-    st.subheader("API Status")
-    if check_api_health():
-        st.success("✅ API is running")
+    # API Status
+    st.markdown('<div class="section-label">API Status</div>',
+                unsafe_allow_html=True)
+    api_ok = check_api_health()
+    if api_ok:
+        st.markdown('<span class="status-ok">✅ Connected & Ready</span>',
+                    unsafe_allow_html=True)
     else:
-        st.error("❌ API is not running")
+        st.markdown('<span class="status-fail">❌ API Not Running</span>',
+                    unsafe_allow_html=True)
         st.code("uvicorn app.api.main:app --reload")
 
     st.divider()
 
-    # Domain Selector
-    st.subheader("Select Domain")
-    selected_domain = st.selectbox(
-        "Domain",
+    # Domain selector
+    st.markdown('<div class="section-label">🌐 Active Domain</div>',
+                unsafe_allow_html=True)
+    selected = st.selectbox(
+        "domain",
         options=list(DOMAINS.keys()),
         format_func=lambda x: DOMAINS[x],
         index=list(DOMAINS.keys()).index(st.session_state.domain),
         label_visibility="collapsed",
     )
+    st.caption(DOMAIN_DESCRIPTIONS.get(selected, ""))
 
-    # Update domain if changed
-    if selected_domain != st.session_state.domain:
-        st.session_state.domain = selected_domain
+    if selected != st.session_state.domain:
+        st.session_state.domain = selected
         st.session_state.messages = []
         st.session_state.last_sources = []
-        st.info("Domain changed. Conversation cleared.")
+        st.rerun()
 
     st.divider()
 
-    # Document Upload
-    st.subheader("Upload Document")
+    # Upload
+    st.markdown('<div class="section-label">📄 Upload Document</div>',
+                unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
-        "Choose a file",
+        "file",
         type=["pdf", "txt", "docx", "md"],
         label_visibility="collapsed",
     )
-
-    if uploaded_file is not None:
-        if st.button("Ingest Document", type="primary"):
-            with st.spinner("Processing document..."):
-                result = ingest_document(
-                    uploaded_file,
-                    st.session_state.domain
-                )
-
+    if uploaded_file:
+        if st.button("⬆️ Ingest Document", type="primary",
+                     use_container_width=True):
+            with st.spinner("Processing..."):
+                result = ingest_document(uploaded_file, st.session_state.domain)
             if result.get("chunks_created", 0) > 0:
                 st.success(
-                    f"✅ Ingested {result['chunks_created']} "
-                    f"chunks from {result['filename']}"
+                    f"✅ {result['chunks_created']} chunks ingested\n"
+                    f"from **{result['filename']}**"
                 )
             else:
                 st.error(result.get("message", "Ingestion failed"))
 
     st.divider()
 
-    # Clear Conversation
-    if st.button("🗑️ Clear Conversation"):
+    if st.button("🗑️ Clear Conversation", use_container_width=True):
         st.session_state.messages = []
         st.session_state.last_sources = []
         st.session_state.session_id = str(uuid.uuid4())
         st.rerun()
 
-    # Session Info
     st.divider()
-    st.caption(f"Session: {st.session_state.session_id[:8]}...")
-    st.caption(f"Messages: {len(st.session_state.messages)}")
+    st.markdown(
+        f'<div class="session-info">'
+        f'🔑 Session: <code>{st.session_state.session_id[:8]}...</code><br>'
+        f'💬 Messages: <strong>{len(st.session_state.messages)}</strong>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 # ─────────────────────────────────────────
-# MAIN CHAT AREA
+# MAIN AREA — Header
 # ─────────────────────────────────────────
 
-# Header
-st.title("🤖 AI Document Intelligence Platform")
-st.caption(
-    f"Active domain: **{DOMAINS[st.session_state.domain]}** "
-    f"| Ask questions about your documents"
+st.markdown('<div class="app-header">', unsafe_allow_html=True)
+st.markdown(
+    '<div class="app-title">🤖 AI Document Intelligence</div>',
+    unsafe_allow_html=True,
 )
-
+st.markdown(
+    f'<div class="app-subtitle">'
+    f'Active domain: <span class="domain-badge">{DOMAINS[st.session_state.domain]}</span>'
+    f'</div>'
+    f'<div class="tagline">'
+    f'Ask questions in natural language · Answers grounded in your documents · Source citations included'
+    f'</div>',
+    unsafe_allow_html=True,
+)
+st.markdown('</div>', unsafe_allow_html=True)
 st.divider()
 
-# Display conversation history
-# Loop through all stored messages and display them
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# ─────────────────────────────────────────
+# WELCOME SCREEN
+# ─────────────────────────────────────────
 
-# Source citations for last answer
+if not st.session_state.messages:
+    st.markdown("""
+    <div class="welcome-card">
+        <span class="welcome-icon">💬</span>
+        <div class="welcome-heading">Ready to answer your questions</div>
+        <div class="welcome-text">
+            Upload a document from the sidebar panel,<br>
+            then ask anything about its contents below.
+        </div>
+        <div class="feature-row">
+            <div class="feature-chip">🔍 Semantic Search</div>
+            <div class="feature-chip">📎 Source Citations</div>
+            <div class="feature-chip">🧠 Conversation Memory</div>
+            <div class="feature-chip">🛡️ Domain Guardrails</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────
+# CONVERSATION DISPLAY
+# ─────────────────────────────────────────
+
+for msg in st.session_state.messages:
+    render_message(msg["role"], msg["content"])
+
+# Sources section
 if st.session_state.last_sources:
-    with st.expander("📄 Sources used in last answer"):
-        for source in st.session_state.last_sources:
-            st.caption(
-                f"📎 {source.get('source', 'Unknown')} "
-                f"| Chunk {source.get('chunk_index', '?')} "
-                f"| Distance: {source.get('distance', '?')}"
-            )
+    pills = "".join([
+        f'<span class="source-pill">'
+        f'📎 {s.get("source","?")} &nbsp;·&nbsp; '
+        f'chunk {s.get("chunk_index","?")} &nbsp;·&nbsp; '
+        f'dist {round(s.get("distance", 0), 3)}'
+        f'</span>'
+        for s in st.session_state.last_sources
+    ])
+    st.markdown(
+        f'<div class="sources-section">'
+        f'<div class="sources-title">📄 Sources used</div>'
+        f'{pills}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 # ─────────────────────────────────────────
 # CHAT INPUT
 # ─────────────────────────────────────────
 
-# st.chat_input creates the message box at the bottom
-# It returns the user's message when they press Enter
 if prompt := st.chat_input("Ask a question about your documents..."):
 
-    # Display user message immediately
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    render_message("user", prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Add to conversation history
-    st.session_state.messages.append({
-        "role":    "user",
-        "content": prompt,
-    })
+    with st.spinner("🤖 Thinking..."):
+        result = send_message(
+            message=prompt,
+            domain=st.session_state.domain,
+            session_id=st.session_state.session_id,
+        )
 
-    # Get AI response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            result = send_message(
-                message=prompt,
-                domain=st.session_state.domain,
-                session_id=st.session_state.session_id,
-            )
-
-        answer = result.get("answer", "No response received")
-        st.markdown(answer)
-
-    # Add AI response to history
-    st.session_state.messages.append({
-        "role":    "assistant",
-        "content": answer,
-    })
-
-    # Store sources for display
+    answer = result.get("answer", "No response received.")
+    render_message("assistant", answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
     st.session_state.last_sources = result.get("sources", [])
-
-    # Rerun to update the sources expander
     st.rerun()

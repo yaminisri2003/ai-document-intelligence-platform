@@ -195,6 +195,10 @@ async def ingest_document(
 
         # Store chunks in vector database
         store = VectorStore(domain=domain)
+        # Fix metadata so source shows original filename not temp path
+        for chunk in chunks:
+            chunk.metadata["source"] = file.filename
+            
         store.add_documents(chunks)
 
         # Clean up temporary file
