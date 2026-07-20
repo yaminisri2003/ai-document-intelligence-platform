@@ -10,7 +10,7 @@
 
 ##  Live Demo
 
-**[Try it on Hugging Face Spaces](#)** ← updated after deployment
+**[🚀 Try the Live Demo](https://ai-document-intelligence-platform.streamlit.app)**
 
 ---
 
